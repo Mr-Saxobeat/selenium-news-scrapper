@@ -1,4 +1,4 @@
-from apnews import APNews
+from bots.reuters import Reuters
 
-bot = APNews()
+bot = Reuters()
 bot.process()
