@@ -16,12 +16,12 @@ class Reuters:
     def __init__(self):
         self.browser = None
         self.search_phrase = "dollars"
-        self.category = "test"
+        self.months = 0
 
     def process(self):
         self.open_browser()
         self.search_news(self.search_phrase)
-        # self.sort_by_newest()
+        self.sort_by_newest()
         news_list = self.get_news_list()
         news_infos = self.extract_news_infos(news_list)
         print(news_infos)
@@ -56,12 +56,13 @@ class Reuters:
         submit_button.click()
 
     def sort_by_newest(self):
-        locator = '//select[@class="Select-input"]'
-        sort_dropdown = self.browser.get_webelement(locator)
+        locator = '//button[@id="sortby"]'
+        self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, locator)))
+        sort_dropdown = self.browser.find_element(By.XPATH, locator)
         sort_dropdown.click()
 
-        newest_option_locator = '//option[text()="Newest"]'
-        newest_option = self.browser.get_webelement(newest_option_locator)
+        newest_option_locator = '//div[@data-testid="Select-Popup"]/ul/li[@data-key="Newest"]'
+        newest_option = self.browser.find_element(By.XPATH, newest_option_locator)
         newest_option.click()
 
     def get_news_list(self):
