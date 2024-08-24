@@ -1,5 +1,5 @@
 import re
-import time
+from datetime import datetime
 from typing import Tuple
 from RPA.Browser.Selenium import Selenium
 from selenium.webdriver.chrome.options import Options
@@ -11,19 +11,21 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions
+from selenium.common.exceptions import TimeoutException
+import os
 
 class Reuters:
     def __init__(self):
         self.browser = None
         self.search_phrase = "dollars"
-        self.months = 0
+        self.months = int(os.getenv('MONTHS_RANGE', 1)) or 1
+        self.next_page = True
 
     def process(self):
         self.open_browser()
         self.search_news(self.search_phrase)
         self.sort_by_newest()
-        news_list = self.get_news_list()
-        news_infos = self.extract_news_infos(news_list)
+        news_infos = self.get_news_infos()
         print(news_infos)
 
     def open_browser(self):
@@ -65,6 +67,20 @@ class Reuters:
         newest_option = self.browser.find_element(By.XPATH, newest_option_locator)
         newest_option.click()
 
+    def get_news_infos(self):
+        all_news_infos = []
+
+        while self.next_page:
+            news_list = self.get_news_list()
+            news_infos = self.extract_news_infos(news_list)
+            all_news_infos.extend(news_infos)
+
+            oldest_news_date = news_infos[-1]['date']
+            self.next_page = self.check_date_is_inside_range(oldest_news_date)
+            self.click_next_page(self.next_page)
+
+        return all_news_infos
+
     def get_news_list(self):
         result_list_locator = '//ul[@class="search-results__list__2SxSK"]'
         self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, result_list_locator)))
@@ -74,24 +90,24 @@ class Reuters:
 
         return articles_list
 
-
     def extract_news_infos(self, news_list):
         news_infos = []
         for article in news_list:
             self.wait.until(lambda d: article.is_displayed())
 
+            date_locator = './/time'
+            date = article.find_element(By.XPATH, date_locator).get_attribute('datetime')
+            article_is_in_range = self.check_date_is_inside_range(date)
+            if not article_is_in_range:
+                self.next_page = False
+                break
+
             title_locator = './/header/a/span'
             title = article.find_element(By.XPATH, title_locator).text
             search_phrase_count = len(title.split(' '))
 
-            date_locator = './/time'
-            date = article.find_element(By.XPATH, date_locator).get_attribute('datetime')
 
-            image_locator = '//img'
-            image_element = article.find_element(By.XPATH, image_locator)
-            self.wait.until(lambda d: image_element.is_displayed())
-            image_src = image_element.get_attribute('src')
-            image_name = self.extract_image_name(image_src)
+            image_name = self.extract_image_name(article)
 
             title_contains_money = self.check_title_contains_money(title)
 
@@ -107,8 +123,18 @@ class Reuters:
 
         return news_infos
     
-    def extract_image_name(self, image_src):
-        return image_src.split('/')[-1]
+    def extract_image_name(self, article):
+        image_name = ''
+        try:
+            image_locator = '//img'
+            image_element = article.find_element(By.XPATH, image_locator)
+            self.wait.until(lambda d: image_element.is_displayed())
+            image_src = image_element.get_attribute('src')
+            image_name = image_src.split('/')[-1]
+        except TimeoutException as e:
+            image_name = 'image loading timed_out'
+            
+        return image_name
     
     def check_title_contains_money(self, title):
         money_regex = re.compile('|'.join([
@@ -124,4 +150,19 @@ class Reuters:
             ]))
 
         return money_regex.search(title) is not None
+    
+    def check_date_is_inside_range(self, oldest_news_date):
+        current_date = datetime.now()
+        oldest_news_date = datetime.strptime(oldest_news_date, "%Y-%m-%dT%H:%M:%SZ")
+        
+        month_diff = current_date.month - oldest_news_date.month
+
+        return month_diff < self.months
+
+    def click_next_page(self, next_page):
+        if next_page:
+            next_page_locator = '//button[contains(@aria-label, "Next stories")]'
+            self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, next_page_locator)))
+            next_page_button = self.browser.find_element(By.XPATH, next_page_locator)
+            next_page_button.click()
 
