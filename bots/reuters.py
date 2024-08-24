@@ -1,3 +1,4 @@
+import re
 import time
 from typing import Tuple
 from RPA.Browser.Selenium import Selenium
@@ -14,7 +15,7 @@ from selenium.webdriver.support import expected_conditions
 class Reuters:
     def __init__(self):
         self.browser = None
-        self.search_phrase = "coronavirus"
+        self.search_phrase = "dollars"
         self.category = "test"
 
     def process(self):
@@ -32,7 +33,7 @@ class Reuters:
         self.browser = Chrome(options=options)
 
         errors = [StaleElementReferenceException, NoSuchElementException]
-        self.wait = WebDriverWait(self.browser, 10, ignored_exceptions=errors)
+        self.wait = WebDriverWait(self.browser, 30, ignored_exceptions=errors)
 
         self.browser.get("https://www.reuters.com/")
 
@@ -86,17 +87,40 @@ class Reuters:
             date = article.find_element(By.XPATH, date_locator).get_attribute('datetime')
 
             image_locator = '//img'
-            image = article.find_element(By.XPATH, image_locator).get_attribute('src')
+            image_element = article.find_element(By.XPATH, image_locator)
+            self.wait.until(lambda d: image_element.is_displayed())
+            image_src = image_element.get_attribute('src')
+            image_name = self.extract_image_name(image_src)
 
+            title_contains_money = self.check_title_contains_money(title)
 
             news_infos.append(
                 {
                     "title": title,
                     "date": date,
-                    "image_name": image,
+                    "image_name": image_name,
                     "search_phrase_count": search_phrase_count,
+                    "title_contains_money": title_contains_money
                 }
             )
 
         return news_infos
+    
+    def extract_image_name(self, image_src):
+        return image_src.split('/')[-1]
+    
+    def check_title_contains_money(self, title):
+        money_regex = re.compile('|'.join([
+                r'\$\d*\.\d{1,2}',
+                r'\$\d+',
+                r'\$\d+\.?',
+                r'\d*\.\d{1,2} dollars',
+                r'\d+ dollars',
+                r'\d+\.? dollars',
+                r'\d*\.\d{1,2} USD',
+                r'\d+ USD',
+                r'\d+\.? USD',
+            ]))
+
+        return money_regex.search(title) is not None
 
