@@ -51,7 +51,7 @@ class Reuters:
         # self.wait = WebDriverWait(self.browser, 2, ignored_exceptions=self.errors)
 
         # self.browser.get("https://www.reuters.com/")
-        self.browser.open_available_browser("https://www.reuters.com/", options=options)
+        self.browser.open_available_browser("https://www.reuters.com/", headless=False, options=options)
         # self.browser.open_headless_chrome_browser("https://www.reuters.com/")
         # self.browser.get("https://mr-saxobeat.github.io/")
 
