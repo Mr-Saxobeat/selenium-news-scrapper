@@ -39,7 +39,7 @@ class LATimes:
         options = Options()
         options.page_load_strategy = 'eager'
         self.browser: Selenium = Selenium()
-        self.browser.set_selenium_speed(0.1)
+        self.browser.set_selenium_speed(1)
         self.browser.open_available_browser("https://www.latimes.com/", options=options, maximized=True)
 
     def close_popup(self):
