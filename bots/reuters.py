@@ -74,8 +74,6 @@ class Reuters:
             news_infos = self.extract_news_infos(news_list)
             all_news_infos.extend(news_infos)
 
-            oldest_news_date = news_infos[-1]['date']
-            self.next_page = self.check_date_is_inside_range(oldest_news_date)
             self.click_next_page(self.next_page)
 
         return all_news_infos
