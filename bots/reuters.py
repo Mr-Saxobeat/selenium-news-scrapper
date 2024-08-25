@@ -93,7 +93,8 @@ class Reuters:
             self.wait.until(lambda d: article.is_displayed())
 
             date_locator = './/time'
-            date = article.find_element(By.XPATH, date_locator).get_attribute('datetime')
+            date_str = article.find_element(By.XPATH, date_locator).get_attribute('datetime')
+            date = datetime.strptime(date_str.split('T')[0], "%Y-%m-%d")
             article_is_in_range = self.check_date_is_inside_range(date)
             if not article_is_in_range:
                 self.next_page = False
