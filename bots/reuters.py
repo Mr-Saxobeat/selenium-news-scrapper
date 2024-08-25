@@ -42,8 +42,8 @@ class Reuters:
         # options.add_argument("--disable-infobars")
         # options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-extensions")
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
+        # options.add_argument("--headless")
+        # options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
         self.browser = Chrome(options=options)
 
@@ -58,6 +58,7 @@ class Reuters:
 
     def click_search_icon(self):
         locator = '//button[@aria-label="Open search bar"]'
+        self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, locator)))
         search_button = self.browser.find_element(By.XPATH, locator)
         self.wait.until(lambda d: search_button.is_displayed())
         search_button.click()
