@@ -1,4 +1,4 @@
-from bots.reuters import Reuters
+from bots.latimes import LATimes
 
-bot = Reuters()
+bot = LATimes()
 bot.process()
