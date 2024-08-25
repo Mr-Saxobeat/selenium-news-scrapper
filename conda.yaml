@@ -10,6 +10,8 @@ dependencies:
   - pip=23.2.1                    # https://pip.pypa.io/en/stable/news
   - robocorp-truststore=0.8.0     # https://pypi.org/project/robocorp-truststore/
   - pip:
+    - robocorp==2.0.1             # https://pypi.org/project/robocorp
+    - robocorp-browser==2.3.3     # https://pypi.org/project/robocorp-browser
     - rpaframework==28.6.2
     - robotframework==6.1.1
     - selenium==4.15.2
