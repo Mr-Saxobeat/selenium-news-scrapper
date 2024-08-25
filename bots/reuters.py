@@ -34,8 +34,8 @@ class Reuters:
         options.add_argument("--start-maximized")
         self.browser = Chrome(options=options)
 
-        errors = [StaleElementReferenceException, NoSuchElementException]
-        self.wait = WebDriverWait(self.browser, 30, ignored_exceptions=errors)
+        self.errors = [StaleElementReferenceException, NoSuchElementException]
+        self.wait = WebDriverWait(self.browser, 30, ignored_exceptions=self.errors)
 
         self.browser.get("https://www.reuters.com/")
 
@@ -126,16 +126,19 @@ class Reuters:
     def extract_image_name(self, article):
         image_name = ''
         try:
-            image_locator = '//img'
+            self.browser.execute_script("arguments[0].scrollIntoView();", article)
+            image_locator = './/img'
+            wait = WebDriverWait(article, 10, ignored_exceptions=self.errors)
+            wait.until(expected_conditions.presence_of_element_located((By.XPATH, image_locator)))
             image_element = article.find_element(By.XPATH, image_locator)
-            self.wait.until(lambda d: image_element.is_displayed())
+            wait.until(lambda d: image_element.is_displayed())
             image_src = image_element.get_attribute('src')
             image_name = image_src.split('/')[-1]
         except TimeoutException as e:
             image_name = 'image loading timed_out'
             
         return image_name
-    
+
     def check_title_contains_money(self, title):
         money_regex = re.compile('|'.join([
                 r'\$\d*\.\d{1,2}',
