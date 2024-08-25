@@ -10,7 +10,6 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions
 from selenium.common.exceptions import TimeoutException
-
 from common.excel import Excel
 
 class Reuters:
@@ -21,6 +20,7 @@ class Reuters:
         self.next_page = True
 
     def process(self):
+        self.clear_output_dir()
         self.open_browser()
         self.search_news(self.search_phrase)
         self.sort_by_newest()
@@ -28,6 +28,12 @@ class Reuters:
         self.create_excel(news_infos)
         self.download_all_images(news_infos)
         print(news_infos)
+
+    def clear_output_dir(self):
+        output_dir = './output'
+        shutil.rmtree(output_dir, ignore_errors=True)
+        os.makedirs(output_dir)
+        os.makedirs('./output/images')
 
     def open_browser(self):
         options = Options()
