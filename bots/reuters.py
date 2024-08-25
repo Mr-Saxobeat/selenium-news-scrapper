@@ -9,7 +9,8 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions
 from selenium.common.exceptions import TimeoutException
-import os
+
+from common.excel import Excel
 
 class Reuters:
     def __init__(self):
@@ -23,6 +24,7 @@ class Reuters:
         self.search_news(self.search_phrase)
         self.sort_by_newest()
         news_infos = self.get_news_infos()
+        self.create_excel(news_infos)
         print(news_infos)
 
     def open_browser(self):
@@ -104,7 +106,6 @@ class Reuters:
             title = article.find_element(By.XPATH, title_locator).text
             search_phrase_count = len(title.split(' '))
 
-
             image_name = self.extract_image_name(article)
 
             title_contains_money = self.check_title_contains_money(title)
@@ -166,3 +167,6 @@ class Reuters:
             next_page_button = self.browser.find_element(By.XPATH, next_page_locator)
             next_page_button.click()
 
+    def create_excel(self, news_infos):
+        excel = Excel()
+        excel.create_excel_file('./outputs/reuters_news.xlsx', news_infos)
