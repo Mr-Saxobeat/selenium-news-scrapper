@@ -150,15 +150,14 @@ class Reuters:
                 r'\d+\.? USD',
             ]))
 
-        return money_regex.search(title) is not None
-    
-    def check_date_is_inside_range(self, oldest_news_date):
-        current_date = datetime.now()
-        oldest_news_date = datetime.strptime(oldest_news_date, "%Y-%m-%dT%H:%M:%SZ")
-        
-        month_diff = current_date.month - oldest_news_date.month
+        title_contains_money = money_regex.search(title) is not None
+        return str(title_contains_money)
 
-        return month_diff < self.months
+    def check_date_is_inside_range(self, date):
+        current_date = datetime.now()
+        month_diff = current_date.month - date.month
+        date_is_inside_range = month_diff < self.months
+        return date_is_inside_range
 
     def click_next_page(self, next_page):
         if next_page:
