@@ -1,4 +1,5 @@
-import os
+import os, shutil
+import urllib
 import re
 from datetime import datetime
 from selenium.webdriver.chrome.options import Options
@@ -25,6 +26,7 @@ class Reuters:
         self.sort_by_newest()
         news_infos = self.get_news_infos()
         self.create_excel(news_infos)
+        self.download_all_images(news_infos)
         print(news_infos)
 
     def open_browser(self):
@@ -134,7 +136,16 @@ class Reuters:
         except TimeoutException as e:
             image_name = 'image loading timed_out'
             
-        return image_name
+
+    def download_all_images(self, news_infos):
+        for news_info in news_infos:
+            image_url = news_info['image_src']
+            image_name = news_info['image_name']
+            self.download_image(image_url, image_name)
+
+    def download_image(self, image_url, image_name):
+        image_path = f'./output/images/{image_name}'
+        urllib.request.urlretrieve(image_url, image_path)
 
     def check_title_contains_money(self, title):
         money_regex = re.compile('|'.join([
