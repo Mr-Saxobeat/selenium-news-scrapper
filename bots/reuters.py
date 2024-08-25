@@ -11,8 +11,6 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions
 from selenium.common.exceptions import TimeoutException
 from common.excel import Excel
-from RPA.Browser.Selenium import Selenium
-from fake_headers import Headers
 
 class Reuters:
     def __init__(self):
