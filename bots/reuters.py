@@ -112,7 +112,8 @@ class Reuters:
             title = article.find_element(By.XPATH, title_locator).text
             search_phrase_count = len(title.split(' '))
 
-            image_name = self.extract_image_name(article)
+            image_src = self.extract_image_src(article)
+            image_name = image_src.split('/')[-1]
 
             title_contains_money = self.check_title_contains_money(title)
 
@@ -120,6 +121,7 @@ class Reuters:
                 {
                     "title": title,
                     "date": date,
+                    "image_src": image_src,
                     "image_name": image_name,
                     "search_phrase_count": search_phrase_count,
                     "title_contains_money": title_contains_money
@@ -128,8 +130,8 @@ class Reuters:
 
         return news_infos
     
-    def extract_image_name(self, article):
-        image_name = ''
+    def extract_image_src(self, article):
+        image_src = ''
         try:
             self.browser.execute_script("arguments[0].scrollIntoView();", article)
             image_locator = './/img'
@@ -138,10 +140,10 @@ class Reuters:
             image_element = article.find_element(By.XPATH, image_locator)
             wait.until(lambda d: image_element.is_displayed())
             image_src = image_element.get_attribute('src')
-            image_name = image_src.split('/')[-1]
         except TimeoutException as e:
-            image_name = 'image loading timed_out'
+            image_src = 'image loading timed_out'
             
+        return image_src
 
     def download_all_images(self, news_infos):
         for news_info in news_infos:
@@ -184,4 +186,4 @@ class Reuters:
 
     def create_excel(self, news_infos):
         excel = Excel()
-        excel.create_excel_file('./outputs/reuters_news.xlsx', news_infos)
+        excel.create_excel_file('./output/reuters_news.xlsx', news_infos)
