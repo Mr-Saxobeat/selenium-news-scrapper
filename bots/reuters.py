@@ -41,17 +41,17 @@ class Reuters:
         os.makedirs('./output/images')
 
     def open_browser(self):
-        # options = Options()
-        # options.page_load_strategy = 'eager'
-        # options.add_argument("--start-maximized")
+        options = Options()
+        options.page_load_strategy = 'eager'
+        options.add_argument("--start-maximized")
         # options.add_argument('--headless=new')
         # self.browser = Chrome(options=options)
-        self.browser = Selenium()
+        self.browser: Selenium = Selenium()
         self.errors = [StaleElementReferenceException, NoSuchElementException]
-        self.wait = WebDriverWait(self.browser, 2, ignored_exceptions=self.errors)
+        # self.wait = WebDriverWait(self.browser, 2, ignored_exceptions=self.errors)
 
         # self.browser.get("https://www.reuters.com/")
-        self.browser.open_chrome_browser("https://www.reuters.com/")
+        self.browser.open_available_browser("https://www.reuters.com/", options=options)
         # self.browser.open_headless_chrome_browser("https://www.reuters.com/")
         # self.browser.get("https://mr-saxobeat.github.io/")
 
@@ -60,17 +60,14 @@ class Reuters:
         self.insert_search_phrase_and_enter(search_phrase)
 
     def click_search_icon(self):
-        # self.browser.get_screenshot_as_file('output/screenshot.png')
-        # self.browser.screenshot(filename='output/screenshot.png')
         locator = '//button[@aria-label="Open search bar"]'
-        self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, locator)))
-        search_button = self.browser.find_element(By.XPATH, locator)
-        self.wait.until(lambda d: search_button.is_displayed())
+        self.browser.wait_until_page_contains_element(locator)
+        search_button = self.browser.find_element(locator)
         search_button.click()
 
     def insert_search_phrase_and_enter(self, search_phrase):
         locator = '//input[@data-testid="FormField:input"]'
-        self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, locator)))
+        # self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, locator)))
         search_input = self.browser.find_element(By.XPATH, locator)
         search_input.send_keys(search_phrase)
         submit_button_locator = '//button[@aria-label="Search"]'
@@ -79,7 +76,7 @@ class Reuters:
 
     def sort_by_newest(self):
         locator = '//button[@id="sortby"]'
-        self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, locator)))
+        # self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, locator)))
         sort_dropdown = self.browser.find_element(By.XPATH, locator)
         sort_dropdown.click()
 
@@ -101,7 +98,7 @@ class Reuters:
 
     def get_news_list(self):
         result_list_locator = '//ul[@class="search-results__list__2SxSK"]'
-        self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, result_list_locator)))
+        # self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, result_list_locator)))
 
         articles_locator = f'{result_list_locator}/li'
         articles_list = self.browser.find_elements(By.XPATH, articles_locator)
@@ -111,7 +108,7 @@ class Reuters:
     def extract_news_infos(self, news_list):
         news_infos = []
         for article in news_list:
-            self.wait.until(lambda d: article.is_displayed())
+            # self.wait.until(lambda d: article.is_displayed())
 
             date_locator = './/time'
             date_str = article.find_element(By.XPATH, date_locator).get_attribute('datetime')
@@ -193,7 +190,7 @@ class Reuters:
     def click_next_page(self, next_page):
         if next_page:
             next_page_locator = '//button[contains(@aria-label, "Next stories")]'
-            self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, next_page_locator)))
+            # self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, next_page_locator)))
             next_page_button = self.browser.find_element(By.XPATH, next_page_locator)
             next_page_button.click()
 
