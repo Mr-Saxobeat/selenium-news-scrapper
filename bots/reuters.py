@@ -60,7 +60,8 @@ class Reuters:
         # options.add_argument("--start-maximized")
         geckodriver_path = "/snap/bin/geckodriver"
         driver_service = webdriver.FirefoxService(executable_path=geckodriver_path)
-        self.browser = Firefox(service=driver_service, options=options)
+        # self.browser = Firefox(service=driver_service, options=options)
+        self.browser = Firefox(options=options)
         self.errors = [StaleElementReferenceException, NoSuchElementException]
         self.wait = WebDriverWait(self.browser, 10, ignored_exceptions=self.errors)
         self.browser.get("https://www.reuters.com/")
