@@ -11,6 +11,8 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions
 from selenium.common.exceptions import TimeoutException
 from common.excel import Excel
+from RPA.Browser.Selenium import Selenium
+from fake_headers import Headers
 
 class Reuters:
     def __init__(self):
@@ -38,25 +40,25 @@ class Reuters:
     def open_browser(self):
         options = Options()
         options.page_load_strategy = 'eager'
-        # options.add_argument("--start-maximized")
-        # options.add_argument("--disable-infobars")
-        # options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-extensions")
-        # options.add_argument("--headless")
-        # options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
+        options.add_argument("--start-maximized")
+        options.add_argument('--remote-debugging-pipe')
+        # options.add_argument('--headless=new')
         self.browser = Chrome(options=options)
-
+        # self.browser = Selenium()
         self.errors = [StaleElementReferenceException, NoSuchElementException]
-        self.wait = WebDriverWait(self.browser, 30, ignored_exceptions=self.errors)
+        self.wait = WebDriverWait(self.browser, 2, ignored_exceptions=self.errors)
 
         self.browser.get("https://www.reuters.com/")
+        # self.browser.open_headless_chrome_browser("https://www.reuters.com/")
+        # self.browser.get("https://mr-saxobeat.github.io/")
 
     def search_news(self, search_phrase):
         self.click_search_icon()
         self.insert_search_phrase_and_enter(search_phrase)
 
     def click_search_icon(self):
+        # self.browser.get_screenshot_as_file('output/screenshot.png')
+        # self.browser.screenshot(filename='output/screenshot.png')
         locator = '//button[@aria-label="Open search bar"]'
         self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, locator)))
         search_button = self.browser.find_element(By.XPATH, locator)
