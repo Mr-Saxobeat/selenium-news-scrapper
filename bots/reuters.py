@@ -3,14 +3,16 @@ import urllib
 import re
 from datetime import datetime
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.common.by import By
-from selenium.webdriver import Chrome
+from selenium.webdriver import Chrome, Firefox
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions
 from selenium.common.exceptions import TimeoutException
 from common.excel import Excel
+from selenium import webdriver
 
 class Reuters:
     def __init__(self):
@@ -21,7 +23,8 @@ class Reuters:
 
     def process(self):
         self.clear_output_dir()
-        self.open_browser()
+        # self.open_browser()
+        self.open_firefox()
         self.search_news(self.search_phrase)
         self.sort_by_newest()
         news_infos = self.get_news_infos()
@@ -49,6 +52,18 @@ class Reuters:
         self.browser.get("https://www.reuters.com/")
         # self.browser.open_headless_chrome_browser("https://www.reuters.com/")
         # self.browser.get("https://mr-saxobeat.github.io/")
+    
+    def open_firefox(self):
+        options = FirefoxOptions()
+        options.page_load_strategy = 'eager'
+        # options.add_argument("--disable-extensions")
+        # options.add_argument("--start-maximized")
+        geckodriver_path = "/snap/bin/geckodriver"
+        driver_service = webdriver.FirefoxService(executable_path=geckodriver_path)
+        self.browser = Firefox(service=driver_service, options=options)
+        self.errors = [StaleElementReferenceException, NoSuchElementException]
+        self.wait = WebDriverWait(self.browser, 10, ignored_exceptions=self.errors)
+        self.browser.get("https://www.reuters.com/")
 
     def search_news(self, search_phrase):
         self.click_search_icon()
@@ -65,6 +80,7 @@ class Reuters:
 
     def insert_search_phrase_and_enter(self, search_phrase):
         locator = '//input[@data-testid="FormField:input"]'
+        self.wait.until(expected_conditions.presence_of_element_located((By.XPATH, locator)))
         search_input = self.browser.find_element(By.XPATH, locator)
         search_input.send_keys(search_phrase)
         submit_button_locator = '//button[@aria-label="Search"]'
