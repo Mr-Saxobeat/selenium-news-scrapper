@@ -6,7 +6,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver import Chrome, Firefox
-from selenium.webdriver.support.ui import WebDriverWait
+# from selenium.webdriver.support.ui import WebDriverWait
+
+from RPA.Browser.Selenium import Selenium
+from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions
@@ -23,8 +26,7 @@ class Reuters:
 
     def process(self):
         self.clear_output_dir()
-        # self.open_browser()
-        self.open_firefox()
+        self.open_browser()
         self.search_news(self.search_phrase)
         self.sort_by_newest()
         news_infos = self.get_news_infos()
@@ -39,32 +41,19 @@ class Reuters:
         os.makedirs('./output/images')
 
     def open_browser(self):
-        options = Options()
-        options.page_load_strategy = 'eager'
-        options.add_argument("--start-maximized")
-        options.add_argument('--remote-debugging-pipe')
+        # options = Options()
+        # options.page_load_strategy = 'eager'
+        # options.add_argument("--start-maximized")
         # options.add_argument('--headless=new')
-        self.browser = Chrome(options=options)
-        # self.browser = Selenium()
+        # self.browser = Chrome(options=options)
+        self.browser = Selenium()
         self.errors = [StaleElementReferenceException, NoSuchElementException]
         self.wait = WebDriverWait(self.browser, 2, ignored_exceptions=self.errors)
 
-        self.browser.get("https://www.reuters.com/")
+        # self.browser.get("https://www.reuters.com/")
+        self.browser.open_chrome_browser("https://www.reuters.com/")
         # self.browser.open_headless_chrome_browser("https://www.reuters.com/")
         # self.browser.get("https://mr-saxobeat.github.io/")
-    
-    def open_firefox(self):
-        options = FirefoxOptions()
-        options.page_load_strategy = 'eager'
-        # options.add_argument("--disable-extensions")
-        # options.add_argument("--start-maximized")
-        geckodriver_path = "/snap/bin/geckodriver"
-        driver_service = webdriver.FirefoxService(executable_path=geckodriver_path)
-        # self.browser = Firefox(service=driver_service, options=options)
-        self.browser = Firefox()
-        self.errors = [StaleElementReferenceException, NoSuchElementException]
-        self.wait = WebDriverWait(self.browser, 10, ignored_exceptions=self.errors)
-        self.browser.get("https://www.reuters.com/")
 
     def search_news(self, search_phrase):
         self.click_search_icon()
