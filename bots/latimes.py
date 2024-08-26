@@ -1,3 +1,4 @@
+import time
 import os, shutil
 import urllib
 import re
@@ -15,10 +16,11 @@ from common.excel import Excel
 class LATimes:
     BASE_URL = 'https://www.latimes.com/'
     SPREADSHEET_NAME = 'latimes_news.xlsx'
+    DEFAULT_IMAGE_TIMEOUT_SRC = 'image loading timed_out'
 
     def __init__(self):
         self.browser = None
-        self.search_phrase = "dollars"
+        self.search_phrase = os.getenv('SEARCH_PHRASE', 'billion')
         self.months = int(os.getenv('MONTHS_RANGE', 1)) or 1
         self.next_page = True
         self.ignored_exceptions = (NoSuchElementException, StaleElementReferenceException)
@@ -77,11 +79,12 @@ class LATimes:
         all_news_infos = []
 
         while self.next_page:
+            time.sleep(2)
             news_list = self.get_news_list()
             news_infos = self.extract_news_infos(news_list)
             all_news_infos.extend(news_infos)
 
-            self.click_next_page(self.next_page)
+            self.goto_next_page(self.next_page)
 
         return all_news_infos
 
@@ -98,7 +101,6 @@ class LATimes:
 
     def extract_news_infos(self, news_list):
         news_infos = []
-        self.browser.screenshot(filename='outputs/article_list.jpg')
         for article in news_list:
 
             self.browser.wait_until_page_contains_element(article)
@@ -158,8 +160,9 @@ class LATimes:
             self.download_image(image_url, image_name)
 
     def download_image(self, image_url, image_name):
-        image_path = f'./output/images/{image_name}'
-        urllib.request.urlretrieve(image_url, image_path)
+        if image_url != self.DEFAULT_IMAGE_TIMEOUT_SRC:
+            image_path = f'./output/images/{image_name}'
+            urllib.request.urlretrieve(image_url, image_path)
 
     def check_title_contains_money(self, title):
         money_regex = re.compile('|'.join([
@@ -183,7 +186,7 @@ class LATimes:
         date_is_inside_range = month_diff < self.months
         return date_is_inside_range
 
-    def click_next_page(self, next_page):
+    def goto_next_page(self, next_page):
         if next_page:
             try:
                 paginator_locator = '//div[@class="search-results-module-pagination"]'
@@ -191,20 +194,9 @@ class LATimes:
                 self.browser.scroll_element_into_view(paginator_locator)
                 next_page_locator = '//div[@class="search-results-module-next-page"]/a'
                 self.browser.wait_until_page_contains_element(next_page_locator, 10)
-                next_page_button = self.browser.find_element(next_page_locator)
-                self.browser.screenshot(filename='outputs/image.jpg')
-
-                # modal_locator = '//modality-custom-element'
-                # self.browser.wait_until_page_contains_element(modal_locator)
-                # shadow_host = self.browser.get_webelement(modal_locator, shadow=True)
-                # button = shadow_host.find_element(By.XPATH, './div[@class="met-container"]')
-                # host = shadow_host.host
-                # if self.browser.is_element_visible(shadow_host):
-                #     self.close_paywall()
 
                 url = self.browser.get_location()
                 next_url = self.get_next_url(url)
-                # next_page_button.click()
                 self.browser.go_to(next_url)
             except AssertionError as e:
                 self.next_page = False
