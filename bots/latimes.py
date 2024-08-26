@@ -37,7 +37,6 @@ class LATimes:
     def clear_output_dir(self):
         shutil.rmtree('./output', ignore_errors=True)
         os.makedirs('./output')
-        os.makedirs('./output/images')
 
     def open_browser(self):
         options = Options()
@@ -161,7 +160,7 @@ class LATimes:
 
     def download_image(self, image_url, image_name):
         if image_url != self.DEFAULT_IMAGE_TIMEOUT_SRC:
-            image_path = f'./output/images/{image_name}'
+            image_path = f'./output/{image_name}'
             urllib.request.urlretrieve(image_url, image_path)
 
     def check_title_contains_money(self, title):
