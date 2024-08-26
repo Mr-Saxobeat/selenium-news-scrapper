@@ -123,7 +123,7 @@ class LATimes:
             search_phrase_count = len(title.split(' '))
 
             image_src = self.extract_image_src(article, wait)
-            image_name = image_src.split('/')[-1]
+            image_name = image_src.split('/')[-1].replace('?url=', '')
 
             title_contains_money = self.check_title_contains_money(title)
 
