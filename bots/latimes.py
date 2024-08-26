@@ -1,7 +1,6 @@
 import os, shutil
 import urllib
 import re
-import time
 from datetime import datetime
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -14,11 +13,15 @@ from selenium.common.exceptions import TimeoutException
 from common.excel import Excel
 
 class LATimes:
+    BASE_URL = 'https://www.latimes.com/'
+    SPREADSHEET_NAME = 'latimes_news.xlsx'
+
     def __init__(self):
         self.browser = None
         self.search_phrase = "dollars"
         self.months = int(os.getenv('MONTHS_RANGE', 1)) or 1
         self.next_page = True
+        self.ignored_exceptions = (NoSuchElementException, StaleElementReferenceException)
 
     def process(self):
         self.clear_output_dir()
@@ -28,34 +31,22 @@ class LATimes:
         news_infos = self.get_news_infos()
         self.create_excel(news_infos)
         self.download_all_images(news_infos)
-        print(news_infos)
 
     def clear_output_dir(self):
-        output_dir = './output'
-        shutil.rmtree(output_dir, ignore_errors=True)
-        os.makedirs(output_dir)
+        shutil.rmtree('./output', ignore_errors=True)
+        os.makedirs('./output')
         os.makedirs('./output/images')
 
     def open_browser(self):
         options = Options()
         options.page_load_strategy = 'eager'
         options.add_argument('--window-size=1920,1080')
-        self.browser: Selenium = Selenium()
-        # self.browser.set_selenium_speed(2)
-        self.browser.open_available_browser("https://www.latimes.com/", options=options, maximized=True, headless=True)
-
-    def get_shadow_root(self, element):
-        return self.browser.execute_javascript('return arguments[0].shadowRoot', element)
-
-    def close_popup(self):
-        popup_locator = '//a[@class="met-flyout-close"]'
-        self.browser.wait_until_page_contains(popup_locator, 30)
-        close_button = self.browser.find_element(popup_locator)
-        close_button.click()
+        self.browser = Selenium()
+        self.browser.open_available_browser(self.BASE_URL, options=options, maximized=True)
 
     def search_news(self, search_phrase):
         self.click_search_icon()
-        self.insert_search_phrase_and_enter(search_phrase)
+        self.insert_search_phrase_and_submit(search_phrase)
 
     def click_search_icon(self):
         locator = '//button[@data-element="search-button"]'
@@ -63,22 +54,22 @@ class LATimes:
         search_button = self.browser.find_element(locator)
         search_button.click()
 
-    def insert_search_phrase_and_enter(self, search_phrase):
-        locator = '//input[@data-element="search-form-input"]'
-        self.browser.wait_until_page_contains_element(locator)
-        search_input = self.browser.find_element(locator)
+    def insert_search_phrase_and_submit(self, search_phrase):
+        input_locator = '//input[@data-element="search-form-input"]'
+        self.browser.wait_until_page_contains_element(input_locator)
+        search_input = self.browser.find_element(input_locator)
         search_input.send_keys(search_phrase)
         submit_button_locator = '//button[@data-element="search-submit-button"]'
         submit_button = self.browser.find_element(submit_button_locator)
         submit_button.click()
 
     def sort_by_newest(self):
-        locator = '//div[@class="search-results-module-sorts"]//select[@class="select-input"]'
-        self.browser.wait_until_page_contains_element(locator)
-        sort_dropdown = self.browser.find_element(locator)
+        dropdown_locator = '//div[@class="search-results-module-sorts"]//select[@class="select-input"]'
+        self.browser.wait_until_page_contains_element(dropdown_locator)
+        sort_dropdown = self.browser.find_element(dropdown_locator)
         sort_dropdown.click()
 
-        newest_option_locator = f'{locator}//option[text()="Newest"]'
+        newest_option_locator = f'{dropdown_locator}//option[text()="Newest"]'
         newest_option = self.browser.find_element(newest_option_locator)
         newest_option.click()
 
@@ -86,7 +77,6 @@ class LATimes:
         all_news_infos = []
 
         while self.next_page:
-            time.sleep(2)
             news_list = self.get_news_list()
             news_infos = self.extract_news_infos(news_list)
             all_news_infos.extend(news_infos)
@@ -110,17 +100,15 @@ class LATimes:
         news_infos = []
         self.browser.screenshot(filename='outputs/article_list.jpg')
         for article in news_list:
+
+            self.browser.wait_until_page_contains_element(article)
             self.browser.scroll_element_into_view(article)
 
-            date_locator = '//p[@class="promo-timestamp"]'
-            # self.browser.wait_until_page_contains_element(date_locator, 10)
-            # timestamp_str = article.find_element(By.XPATH, date_locator).get_attribute('data-timestamp')
-            # timestamp_str = self.browser.find_element(date_locator, article).get_attribute('data-timestamp')
 
-            wait = WebDriverWait(article, 10, ignored_exceptions=(NoSuchElementException, StaleElementReferenceException))
+            wait = WebDriverWait(article, 10, ignored_exceptions=self.ignored_exceptions)
+            date_locator = './/p[@class="promo-timestamp"]'
             wait.until(expected_conditions.presence_of_element_located((By.XPATH, date_locator)))
             timestamp_str = article.find_element(By.XPATH, date_locator).get_attribute('data-timestamp')
-
             timestamp_int = float(timestamp_str)/1000
             date = datetime.fromtimestamp(timestamp_int, None)
             article_is_in_range = self.check_date_is_inside_range(date)
@@ -128,12 +116,12 @@ class LATimes:
                 self.next_page = False
                 break
 
-            title_locator = '//h3/a'
-            self.browser.wait_until_page_contains_element(title_locator)
-            title = self.browser.find_element(title_locator, article).text
+            title_locator = './/h3[@class="promo-title"]/a'
+            wait.until(expected_conditions.presence_of_element_located((By.XPATH, title_locator)))
+            title = article.find_element(By.XPATH, title_locator).text
             search_phrase_count = len(title.split(' '))
 
-            image_src = self.extract_image_src(article)
+            image_src = self.extract_image_src(article, wait)
             image_name = image_src.split('/')[-1]
 
             title_contains_money = self.check_title_contains_money(title)
@@ -151,18 +139,12 @@ class LATimes:
 
         return news_infos
     
-    def extract_image_src(self, article):
+    def extract_image_src(self, article, wait):
         image_src = ''
         try:
-            # self.browser.execute_script("arguments[0].scrollIntoView();", article)
-            # self.browser.execute_javascript("arguments[0].scrollIntoView();", article)
-            image_locator = '//div[@class="promo-media"]/a/picture/img'
-            # self.browser.wait_until_page_contains_element(image_locator)
-            
-            self.browser.wait_until_page_contains_element(image_locator)
-            
-            image_element = self.browser.find_element(image_locator, parent=article)
-            
+            image_locator = './/div[@class="promo-media"]/a/picture/img'
+            wait.until(expected_conditions.presence_of_element_located((By.XPATH, image_locator)))
+            image_element = article.find_element(By.XPATH, image_locator)
             image_src = image_element.get_attribute('src')
         except TimeoutException as e:
             image_src = 'image loading timed_out'
@@ -240,10 +222,5 @@ class LATimes:
 
     def create_excel(self, news_infos):
         excel = Excel()
-        excel.create_excel_file('./output/reuters_news.xlsx', news_infos)
-
-    def close_paywall(self):
-        shadow_host = self.browser.find_element('//modality-custom-element')
-        shadow_host = self.get_shadow_root(shadow_host)
-        close_button = shadow_host.find_element('./a[@class="met-flyout-close"]')
-        close_button.click()
+        filename = f'./output/{self.SPREADSHEET_NAME}'
+        excel.create_excel_file(filename, news_infos)
