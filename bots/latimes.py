@@ -1,6 +1,7 @@
 import os, shutil
 import urllib
 import re
+import time
 from datetime import datetime
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -38,9 +39,13 @@ class LATimes:
     def open_browser(self):
         options = Options()
         options.page_load_strategy = 'eager'
+        options.add_argument('--window-size=1920,1080')
         self.browser: Selenium = Selenium()
-        self.browser.set_selenium_speed(1)
-        self.browser.open_available_browser("https://www.latimes.com/", options=options, maximized=True)
+        # self.browser.set_selenium_speed(2)
+        self.browser.open_available_browser("https://www.latimes.com/", options=options, maximized=True, headless=True)
+
+    def get_shadow_root(self, element):
+        return self.browser.execute_javascript('return arguments[0].shadowRoot', element)
 
     def close_popup(self):
         popup_locator = '//a[@class="met-flyout-close"]'
@@ -81,6 +86,7 @@ class LATimes:
         all_news_infos = []
 
         while self.next_page:
+            time.sleep(2)
             news_list = self.get_news_list()
             news_infos = self.extract_news_infos(news_list)
             all_news_infos.extend(news_infos)
@@ -102,17 +108,18 @@ class LATimes:
 
     def extract_news_infos(self, news_list):
         news_infos = []
+        self.browser.screenshot(filename='outputs/article_list.jpg')
         for article in news_list:
             self.browser.scroll_element_into_view(article)
 
-            try:
-                date_locator = '//p[@class="promo-timestamp"]'
-                self.browser.wait_until_page_contains_element(date_locator)
-                timestamp_str = self.browser.find_element(date_locator, article).get_attribute('data-timestamp')
-            except StaleElementReferenceException as e:
-                date_locator = '//p[@class="promo-timestamp"]'
-                self.browser.wait_until_page_contains_element(date_locator)
-                timestamp_str = self.browser.find_element(date_locator, article).get_attribute('data-timestamp')
+            date_locator = '//p[@class="promo-timestamp"]'
+            # self.browser.wait_until_page_contains_element(date_locator, 10)
+            # timestamp_str = article.find_element(By.XPATH, date_locator).get_attribute('data-timestamp')
+            # timestamp_str = self.browser.find_element(date_locator, article).get_attribute('data-timestamp')
+
+            wait = WebDriverWait(article, 10, ignored_exceptions=(NoSuchElementException, StaleElementReferenceException))
+            wait.until(expected_conditions.presence_of_element_located((By.XPATH, date_locator)))
+            timestamp_str = article.find_element(By.XPATH, date_locator).get_attribute('data-timestamp')
 
             timestamp_int = float(timestamp_str)/1000
             date = datetime.fromtimestamp(timestamp_int, None)
@@ -196,15 +203,47 @@ class LATimes:
 
     def click_next_page(self, next_page):
         if next_page:
-            # self.close_popup()
-            footer_locator = '//footer'
-            self.browser.wait_until_page_contains_element(footer_locator)
-            self.browser.scroll_element_into_view(footer_locator)
-            next_page_locator = '//div[@class="search-results-module-next-page"]/a'
-            self.browser.wait_until_page_contains_element(next_page_locator)
-            next_page_button = self.browser.find_element(next_page_locator)
-            next_page_button.click()
+            try:
+                paginator_locator = '//div[@class="search-results-module-pagination"]'
+                self.browser.wait_until_page_contains_element(paginator_locator)
+                self.browser.scroll_element_into_view(paginator_locator)
+                next_page_locator = '//div[@class="search-results-module-next-page"]/a'
+                self.browser.wait_until_page_contains_element(next_page_locator, 10)
+                next_page_button = self.browser.find_element(next_page_locator)
+                self.browser.screenshot(filename='outputs/image.jpg')
+
+                # modal_locator = '//modality-custom-element'
+                # self.browser.wait_until_page_contains_element(modal_locator)
+                # shadow_host = self.browser.get_webelement(modal_locator, shadow=True)
+                # button = shadow_host.find_element(By.XPATH, './div[@class="met-container"]')
+                # host = shadow_host.host
+                # if self.browser.is_element_visible(shadow_host):
+                #     self.close_paywall()
+
+                url = self.browser.get_location()
+                next_url = self.get_next_url(url)
+                # next_page_button.click()
+                self.browser.go_to(next_url)
+            except AssertionError as e:
+                self.next_page = False
+
+    def get_next_url(self, url: str):
+        if 'p=' in url:
+            splited_url = url.split('&')
+            p_parameter = splited_url[2]
+            current_page = int(p_parameter[2])
+            new_p_parameter = f'{p_parameter[0:2]}{current_page + 1}'
+            next_url = f'{splited_url[0]}&{splited_url[1]}&{new_p_parameter}'
+        else:
+            next_url = f'{url}&p=2'
+        return next_url
 
     def create_excel(self, news_infos):
         excel = Excel()
         excel.create_excel_file('./output/reuters_news.xlsx', news_infos)
+
+    def close_paywall(self):
+        shadow_host = self.browser.find_element('//modality-custom-element')
+        shadow_host = self.get_shadow_root(shadow_host)
+        close_button = shadow_host.find_element('./a[@class="met-flyout-close"]')
+        close_button.click()
