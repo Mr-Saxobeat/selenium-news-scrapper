@@ -1,0 +1,1 @@
+This repo contains a study project I used to learn Selenium to scrap a news website by searching a term on the search bar, scrap the titles, the images names and put it all in a spreadsheet. It also downloads the images.
